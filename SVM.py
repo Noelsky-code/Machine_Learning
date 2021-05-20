@@ -18,29 +18,6 @@ rating = ['18k', '17k', '16k', '15k', '14k', '13k', '12k', '11k', '10k',
 
 
 #%%
-train_label = np.zeros(num_train_data)
-cnt=0
-for i in range(num_train_data):
-  train_label_temp = train_label_rawdata[i]
-  train_label_idx = rating.index(train_label_temp)
-  train_label[i] = train_label_idx
-    
-print(sum(train_label==0)) # number of '18k' 
-print(sum(train_label==26)) # number of '9d'
-
-# %%
-test_data=np.load('./test_data.npy',allow_pickle=True)
-num_test_data=len(test_data)
-
-# %%
-test_label_rawdata = np.load('./test_label.npy', allow_pickle=True)
-test_label = np.zeros(num_test_data)
-
-for i in range(num_test_data):
-  test_label_temp = test_label_rawdata[i]
-  test_label_idx = rating.index(test_label_temp)
-  test_label[i] = test_label_idx
-#%%
 import math
 def dist(a,b):
     y1 = np.where(np.logical_or(a==1,a==-1))[1][0]
@@ -49,12 +26,107 @@ def dist(a,b):
     x2 = np.where(np.logical_or(b==1,b==-1))[2][0]
     return math.sqrt( abs(y2-y1)*abs(y2-y1) + abs(x2-x1)*abs(x2-x1))
     #return abs(y2-y1)+abs(x2-x1)
+# %%
+test_data=np.load('./test_data.npy',allow_pickle=True)
+num_test_data=len(test_data)
+
+# %%
+test_label_rawdata = np.load('./test_label.npy', allow_pickle=True)
+
+#%%
+test_label = np.zeros(num_test_data)
+
+for i in range(num_test_data):
+  test_label_temp = test_label_rawdata[i]
+  test_label_idx = rating.index(test_label_temp)
+  test_label[i] = test_label_idx
+#%%
+train_label = np.zeros(num_train_data)
+cnt=0
+for i in range(num_train_data):
+    train_label_temp = train_label_rawdata[i]
+    train_label_idx = rating.index(train_label_temp)
+    train_label[i] = train_label_idx
+
+#%%
+zero_train_set = np.zeros(num_train_data)
+size=10
+for i in range(num_train_data):
+    avg=0 
+    sum =0
+    for j in range(size-1):
+        if j == 0 :
+            sum = sum + dist(train_data[i][0],train_data[i][j+1]-train_data[i][j])
+        else :
+            sum = sum + dist(train_data[i][j]-train_data[i][j-1],train_data[i][j+1]-train_data[i][j])
+    #sum= sum/1000
+    zero_train_set[i] = sum*10
+train_set = np.reshape(zero_train_set,(num_train_data,1))
+
+zero_test_set = np.zeros(num_test_data)
+for i in range(num_test_data):
+    avg=0 
+    sum =0
+    for j in range(size-1):
+        if j == 0 :
+            sum = sum + dist(test_data[i][0],test_data[i][j+1]-test_data[i][j])
+        else :
+            sum = sum + dist(test_data[i][j]-test_data[i][j-1],test_data[i][j+1]-test_data[i][j])
+    #sum= sum/1000
+    zero_test_set[i] = sum*10
+test_set = np.reshape(zero_test_set,(num_test_data,1))
+#%%
+from sklearn.ensemble import RandomForestClassifier
+start_time = timeit.default_timer()
+clf = RandomForestClassifier(n_estimators=200,min_samples_split= 6,min_samples_leaf=6,max_depth=17,n_jobs=5,random_state=42);
+clf.fit(train_set,train_label)
+terminate_time = timeit.default_timer()
+print("%f초 걸렸습니다." % (terminate_time - start_time)) 
+# %%
+print(test_set.shape)
+start_time = timeit.default_timer()
+pred_test_label = clf.predict(test_set)
+terminate_time = timeit.default_timer()
+print("%f초 걸렸습니다." % (terminate_time - start_time)) 
+#%%
+sum=0
+for i in range(num_test_data):
+    if pred_test_label[i]==test_label[i]:
+        sum+=1
+print(sum*100/num_test_data)
+#%%
+train_label = np.zeros(num_train_data)
+label_t = np.zeros(len(rating))
+cnt=0
+for i in range(num_train_data):
+  train_label_temp = train_label_rawdata[i]
+  train_label_idx = rating.index(train_label_temp)
+  train_label[i] = train_label_idx
+
+for i in range (len(rating)):
+    label_t[i] = sum(train_label==i)
+print(sum(train_label==0)) # number of '18k' 
+print(sum(train_label==26)) # number of '9d'
+print(label_t)
+# %%
+test_data=np.load('./test_data.npy',allow_pickle=True)
+num_test_data=len(test_data)
+
+
+#%%
+test_label = np.zeros(num_test_data)
+
+for i in range(num_test_data):
+  test_label_temp = test_label_rawdata[i]
+  test_label_idx = rating.index(test_label_temp)
+  test_label[i] = test_label_idx
+
 #%%
 # 거리 평균값 확인하기 
 avg = np.zeros(len(rating))
 for i in range (num_train_data):
     sum =0
-    for j in range(14):
+    for j in range(10):
         if j == 0 :
             sum = sum + dist(train_data[i][0],train_data[i][j+1]-train_data[i][j])
         else :
@@ -62,15 +134,10 @@ for i in range (num_train_data):
     idx = (int)(train_label[i])
     avg[idx]+=sum
 #%%
-print(sum(train_label==0)) # number of '18k' 
-for i in range(len(rating)):
-    print(sum(train_label==0)) # number of '18k' 
-    #sum((train_label==0))
-    #print(div)
-    #avg[i] = avg[i]/div
- #3번쨰 수 
-
-# %%
+avg = avg/(label_t*10)
+#%%
+print(avg)
+  # %%
 zero_train_set = np.zeros( (num_train_data, 10,2,19,19) )
 for i in range(num_train_data):
     for j in range(10):
@@ -213,7 +280,7 @@ for i in range (len_pred):
 print('Accuracy on test data: ' + str(sum(pred_test_label==test_label)/len(test_label)))
 # %%
 
-zero_train_set = np.zeros( (num_train_data,7,2,19,19) )
+zero_train_set = np.zeros( (num_train_data,10,2,19,19) )
 for i in range(num_train_data):
     for j in range(7):
         if j <4 : 
@@ -230,77 +297,121 @@ train_set=np.reshape(zero_train_set,(num_train_data*7,2*19*19))
 # 모든 데이터 넣기
 all_train_data = 0 
 for i in range (num_train_data):
-    if len(train_data[i])>60 : 
+    if len(train_data[i])>65 : 
         all_train_data +=60
     else :
-        all_train_data +=len(train_data[i])-1
+        all_train_data +=len(train_data[i])-6
    
     
 print(all_train_data)
 
-zero_train_set = np.zeros((all_train_data,2,19,19))
+zero_train_set = np.zeros((all_train_data,6,19,19))
 cnt = 0 
 for i in range(num_train_data):
     a = 0
-    if len(train_data[i])>60 : 
+    if len(train_data[i])>65 : 
         a=60
     else :
-        a = len(train_data[i])-1
+        a = len(train_data[i])-6
     
     for j in range (a):
         #print(cnt)
-        if j==0:
-            zero_train_set[cnt,0,:,:]=np.zeros((19,19))
-            zero_train_set[cnt,1,:,:] = train_data[i][0]
-        elif j <5 : 
-            zero_train_set[cnt,0,:,:]=train_data[i][j-1] # j번쨰 판의 상태 넣음 
-            for k in range(1):
-                zero_train_set[cnt,1,:,:] = train_data[i][j+k] - train_data[i][j+k-1]
+        if j <6 : 
+            zero_train_set[cnt,0,:,:]=train_data[i][j] # j번쨰 판의 상태 넣음 
+            for k in range(5):
+                zero_train_set[cnt,k+1,:,:] = train_data[i][j+k+1] - train_data[i][j+k]
         else : 
             zero_train_set[cnt,0,:,:]=train_data[i][j-1]-train_data[i][j-5] # j번쨰 판의 상태 넣음 
-            for k in range(1):
-                zero_train_set[cnt,1,:,:] = train_data[i][j+k] - train_data[i][j+k-1]
+            for k in range(5):
+                zero_train_set[cnt,k+1,:,:] = train_data[i][j+k+1] - train_data[i][j+k]
         cnt= cnt+1
 print(cnt)
-train_set = np.reshape(zero_train_set,(all_train_data,(2*19*19)))
+train_set = np.reshape(zero_train_set,(all_train_data,(6*19*19)))
 print(train_set.shape)
 
 all_test_data = 0 
 for i in range (num_test_data):
-    if len(test_data[i])>60 : 
+    if len(test_data[i])>65 : 
         all_test_data +=60
     else :
-        all_test_data +=len(test_data[i])-1
+        all_test_data +=len(test_data[i])-6
    
     
 print(all_test_data)
 
-zero_test_set = np.zeros((all_test_data,2,19,19))
+zero_test_set = np.zeros((all_test_data,6,19,19))
 cnt = 0 
 for i in range(num_test_data):
     a = 0
-    if len(test_data[i])>60 : 
+    if len(test_data[i])>65 : 
         a=60
     else :
-        a = len(test_data[i])-1
+        a = len(test_data[i])-6
     
     for j in range (a):
-        #print(cnt)
-        if j==0:
-            zero_test_set[cnt,0,:,:]=np.zeros((19,19))
-            zero_test_set[cnt,1,:,:] = test_data[i][0]
-        if j <5 : 
-            zero_test_set[cnt,0,:,:]=test_data[i][j-1] # j번쨰 판의 상태 넣음 
-            for k in range(1):
-                zero_test_set[cnt,1,:,:] = test_data[i][j+k] - test_data[i][j+k-1]
+
+        if j <6 : 
+            zero_test_set[cnt,0,:,:]=test_data[i][j] # j번쨰 판의 상태 넣음 
+            for k in range(5):
+                zero_test_set[cnt,k+1,:,:] = test_data[i][j+k+1] - test_data[i][j+k]
         else : 
-            zero_test_set[cnt,0,:,:]=test_data[i][j-1]-test_data[i][j-5] # j번쨰 판의 상태 넣음 
-            for k in range(1):
-                zero_test_set[cnt,1,:,:] = test_data[i][j] - test_data[i][j+k-1]
+            zero_test_set[cnt,0,:,:]=test_data[i][j]-test_data[i][j-5] # j번쨰 판의 상태 넣음 
+            for k in range(5):
+                zero_test_set[cnt,k+1,:,:] = test_data[i][j+k+1] - test_data[i][j+k]
         cnt= cnt+1
 print(cnt)
-test_set = np.reshape(zero_test_set,(all_test_data,(2*19*19)))
+test_set = np.reshape(zero_test_set,(all_test_data,(6*19*19)))
 print(test_set.shape)
+#%%
+train_label = np.zeros(all_train_data)
+cnt=0
+for i in range(num_train_data):
+    a = 0
+    if len(train_data[i])>65 : 
+        a=60
+    else :
+        a = len(train_data[i])-6
+
+    train_label_temp = train_label_rawdata[i]
+    train_label_idx = rating.index(train_label_temp)
+    for j in range (a):
+        train_label[cnt] = train_label_idx
+        cnt=cnt+1
+#%%
+from sklearn.ensemble import RandomForestClassifier
+start_time = timeit.default_timer()
+clf = RandomForestClassifier(n_estimators=300,min_samples_split= 6,min_samples_leaf=6,max_depth=57,n_jobs=5,random_state=42);
+clf.fit(train_set,train_label)
+terminate_time = timeit.default_timer()
+print("%f초 걸렸습니다." % (terminate_time - start_time)) 
+# %%
+print(test_set.shape)
+start_time = timeit.default_timer()
+pred_test_label = clf.predict(test_set)
+terminate_time = timeit.default_timer()
+print("%f초 걸렸습니다." % (terminate_time - start_time)) 
+#%%
+from collections import Counter
+
+pred_len = len(pred_test_label)
+pred = np.zeros(num_test_data)
+k=0
+for i in range (num_test_data):
+    
+    if len(test_data[i])>65 : 
+        a=60
+    else :
+        a = len(test_data[i])-6
+    counter  = np.zeros(a)
+    for j in range (a) :
+        counter[j] = pred_test_label[k]
+        k=k+1
+    cnt = Counter(counter)
+    pred[i] = cnt.most_common(1)[0][0]
+
+#%%
+#print(sum(pred==1.))
+print('Accuracy on test data: ' + str(sum(pred==test_label)*100/len(test_label)))
 #%%
 # 수정버전 
 all_train_data = 0 
@@ -383,10 +494,10 @@ train_label = np.zeros(all_train_data)
 cnt=0
 for i in range(num_train_data):
     a = 0
-    if len(train_data[i])>70 : 
-        a=70
+    if len(train_data[i])>65 : 
+        a=60
     else :
-        a = len(train_data[i])-1
+        a = len(train_data[i])-6
 
     train_label_temp = train_label_rawdata[i]
     train_label_idx = rating.index(train_label_temp)
@@ -396,9 +507,11 @@ for i in range(num_train_data):
 
 #  랜덤 포레스트 
 #%%
+print(cnt)
+#%%
 from sklearn.ensemble import RandomForestClassifier
 start_time = timeit.default_timer()
-clf = RandomForestClassifier(n_estimators=200,min_samples_split= 6,min_samples_leaf=6,max_depth=17,n_jobs=5,random_state=42);
+clf = RandomForestClassifier(n_estimators=200,min_samples_split= 6,min_samples_leaf=6,max_depth=57,n_jobs=5,random_state=42);
 clf.fit(train_set,train_label)
 terminate_time = timeit.default_timer()
 print("%f초 걸렸습니다." % (terminate_time - start_time)) 
@@ -418,10 +531,10 @@ pred = np.zeros(num_test_data)
 k=0
 for i in range (num_test_data):
     
-    if len(test_data[i])>70 : 
-        a=70
+    if len(test_data[i])>65 : 
+        a=60
     else :
-        a = len(test_data[i])-1
+        a = len(test_data[i])-6
     counter  = np.zeros(a)
     for j in range (a) :
         counter[j] = pred_test_label[k]
@@ -446,6 +559,28 @@ for i in range(num_train_data):
 #%%
 size = 11
 # %%
+zero_train_set = np.zeros( (num_train_data,size+1,2,19,19) )
+for i in range(num_train_data):
+    avg=0
+    for j in range(size):
+        
+        if j==0 :
+            zero_train_set[i,j,0,:,:]=np.zeros((19,19)) # j번쨰 판의 상태 넣음 
+        else :
+            zero_train_set[i,j,0,:,:]=train_data[i][j-1]
+        zero_train_set[i,j,1,:,:] = train_data[i][j] - train_data[i][j-1]
+    sum =0
+    for j in range(size-1):
+        if j == 0 :
+            sum = sum + dist(train_data[i][0],train_data[i][j+1]-train_data[i][j])
+        else :
+            sum = sum + dist(train_data[i][j]-train_data[i][j-1],train_data[i][j+1]-train_data[i][j])
+    sum= sum/((size-1)*11)
+    zero_train_set[i,size,:,:,:]=np.zeros((2,19,19))+sum 
+
+
+train_set=np.reshape(zero_train_set,(num_train_data,(size+1)*2*19*19)) 
+#%%
 zero_train_set = np.zeros( (num_train_data,size,2,19,19) )
 for i in range(num_train_data):
     
@@ -457,7 +592,27 @@ for i in range(num_train_data):
         zero_train_set[i,j,1,:,:] = train_data[i][j] - train_data[i][j-1]
         
 
-train_set=np.reshape(zero_train_set,(num_train_data,size*2*19*19)) 
+train_set=np.reshape(zero_train_set,(num_train_data,size*2*19*19))
+#%%
+
+zero_test_set = np.zeros( (num_test_data,size+1,2,19,19) )
+for i in range(num_test_data):
+    for j in range(size):
+        if j==0 :
+            zero_test_set[i,j,0,:,:]=np.zeros((19,19)) # j번쨰 판의 상태 넣음 
+        else :
+            zero_test_set[i,j,0,:,:]=test_data[i][j-1]
+        zero_test_set[i,j,1,:,:] = test_data[i][j] - test_data[i][j-1]
+    sum =0
+    for j in range(size-1):
+        if j == 0 :
+            sum = sum + dist(test_data[i][0],test_data[i][j+1]-test_data[i][j])
+        else :
+            sum = sum + dist(test_data[i][j]-test_data[i][j-1],test_data[i][j+1]-test_data[i][j])
+    sum= sum/((size-1)*11)
+    zero_test_set[i,size,:,:,:]=np.zeros((2,19,19))+sum         
+
+test_set=np.reshape(zero_test_set,(num_test_data,(size+1)*2*19*19)) 
 
 #%%
 
@@ -480,6 +635,33 @@ for i in range(num_train_data):
   train_label_temp = train_label_rawdata[i]
   train_label_idx = rating.index(train_label_temp)
   train_label[i] = train_label_idx
+# %%
+zero_train_set = np.zeros( (num_train_data, 9,6,19,19) )
+for i in range(num_train_data):
+    for j in range(9):
+        if j <6 : 
+            zero_train_set[i,j,0,:,:]=train_data[i][j] # j번쨰 판의 상태 넣음 
+            for k in range(5):
+                zero_train_set[i,j,k+1,:,:] = train_data[i][j+k+1] - train_data[i][j+k]
+        else : 
+            zero_train_set[i,j,0,:,:]=train_data[i][j]-train_data[i][j-4] # j번쨰 판의 상태 넣음 
+            for k in range(5):
+                zero_train_set[i,j,k+1,:,:] = train_data[i][j+k+1] - train_data[i][j+k]
+
+train_set=np.reshape(zero_train_set,(num_train_data,9*6*19*19)) 
+#%%
+zero_test_set = np.zeros( (num_test_data, 9,6,19,19) )
+for i in range(num_test_data):
+    for j in range(9):
+        if j <6 : 
+            zero_test_set[i,j,0,:,:]=test_data[i][j] # j번쨰 판의 상태 넣음 
+            for k in range(5):
+                zero_test_set[i,j,k+1,:,:] = test_data[i][j+k+1] - test_data[i][j+k]
+        else : 
+            zero_test_set[i,j,0,:,:]=test_data[i][j]-test_data[i][j-4] # j번쨰 판의 상태 넣음 
+            for k in range(5):
+                zero_test_set[i,j,k+1,:,:] = test_data[i][j+k+1] - test_data[i][j+k]
+test_set=np.reshape(zero_test_set,(num_test_data,9*6*19*19))
 #%%
 from sklearn.ensemble import RandomForestClassifier
 start_time = timeit.default_timer()
@@ -495,6 +677,7 @@ terminate_time = timeit.default_timer()
 print("%f초 걸렸습니다." % (terminate_time - start_time)) 
 
 
+#%%
 test_label = np.zeros(num_test_data)
 
 for i in range(num_test_data):
@@ -503,12 +686,25 @@ for i in range(num_test_data):
   test_label[i] = test_label_idx
 
 # %%
-print('Accuracy on test data: ' + str(sum(pred_test_label==test_label)*100/len(test_label)))
+
+sum=0
+for i in range(num_test_data):
+    if pred_test_label[i]==test_label[i]:
+        sum+=1
+print(sum*100/num_test_data)
+#%%
+#print(type(test_label))
+#print(type(pred_test_label))
+#print(test_label==pred_test_label)
+print(pred_test_label)
+print(test_label)
+print('Accuracy on test data: ' + str(sum(pred_test_label==test_label)*100/num_test_data))
 # %%
 '''
-10번쨰 수 까지 -> depth = 15 -> 
+11번쨰 수 까지 -> depth = 17 -> 10.7  
 '''
 #%%
+# 
 model = SVC(kernel='rbf',C=1.0, gamma=0.10)# 선형적 비선형적 d
 
 start_time = timeit.default_timer()
@@ -521,7 +717,9 @@ pred_test_label = model.predict(test_set)
 terminate_time = timeit.default_timer()
 print("%f초 걸렸습니다." % (terminate_time - start_time))
 # %%
-print('Accuracy on test data: ' + str(sum(pred_test_label==test_label)*100/len(test_label)))
+
+
+print('Accuracy on test data: ' + str(sum(pred_test_label==test_label)/len(test_label)))
 
 
 # %%
