@@ -770,23 +770,59 @@ for i in range(num_test_data+num_train_data):
 
 # %%
 #주의 시간 엄청오래걸림 
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV
 
-params = { 'n_estimators' : [ 50,100,200,300],
-           'max_depth' : [10,11,12,13,14,15,16,17,18,20,22,24]
-            }
-rf_clf = RandomForestClassifier(random_state = 0, n_jobs = -1)
+params = { 'n_estimators' : [100, 200,300,400,500,1000],
+           'max_depth' : [20,30,40,45,50,60,70,80,90,100],
+            'max_features': [2,4,6,8,10,12],
+            'min_samples_leaf': [2,3,4,5,6,8,10],
+            'min_samples_split': [8, 10, 12,14,16,18,20]
+        }
+rf_clf = RandomForestClassifier(random_state = 42, n_jobs = -1)
 grid_cv = GridSearchCV(rf_clf, param_grid = params, cv = 3, n_jobs = -1)
 grid_cv.fit(cheat_set,cheat_label)
+#%%
+grid_cv.best_params_
+#30 , 400 : best 
+# %%
+#주의 시간 엄청오래걸림 
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import GridSearchCV
 
+params = { 'n_estimators' : [100, 200,300,400,500,600,700,800,900,1000,1250,1500,1750,2000],
+           'max_depth' : [10,20,30,40,45,50,60,70,80,90,100,150,200,250,300]
+        }
+rf_clf = RandomForestClassifier(random_state = 42, n_jobs = -1)
+grid_cv = GridSearchCV(rf_clf, param_grid = params, cv = 3, n_jobs = -1)
+grid_cv.fit(cheat_set,cheat_label)
+#%%
+grid_cv.best_params_
+# %%
+#주의 시간 엄청오래걸림 
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import GridSearchCV
 
+params = { 'n_estimators' : [100, 200,300,400,500,600,700,800,900,1000,1100,1200,1300,1400,1500],
+           'max_depth' : [20,30,40,45,50,60,70,80,90,100],
+            'max_features': [2,4,6,8,10,12,14,16,18,20],
+            'min_samples_leaf': [2,3,4,5,6,8,10,12,16,20],
+            'min_samples_split': [2,4,6,8, 10, 12,14,16,18,20]
+        }
+rf_clf = RandomForestClassifier(random_state = 42, n_jobs = -1)
+grid_cv = GridSearchCV(rf_clf, param_grid = params, cv = 3, n_jobs = -1)
+grid_cv.fit(cheat_set,cheat_label)
+#%%
+grid_cv.best_params_
 # %%
 from sklearn.ensemble import RandomForestClassifier
 start_time = timeit.default_timer()
-clf = RandomForestClassifier(n_estimators=200,max_depth=17,n_jobs=5,random_state=42);
+clf = RandomForestClassifier(n_estimators=500,max_depth=100,n_jobs=5,random_state=42)
 clf.fit(cheat_set,cheat_label)
 terminate_time = timeit.default_timer()
 print("%f초 걸렸습니다." % (terminate_time - start_time)) 
+#%%
+
 # %%
 #주의 시간 엄청오래걸림 
 from sklearn.model_selection import GridSearchCV
@@ -809,6 +845,95 @@ clf.fit(cheat_set,cheat_label)
 
 
 '''
+
+#%%
+train_data=np.load('./train_data.npy',allow_pickle=True)
+train_label_rawdata=np.load('./train_label.npy',allow_pickle=True)
+num_train_data = len(train_data)
+
+rating = ['18k', '17k', '16k', '15k', '14k', '13k', '12k', '11k', '10k', 
+        '9k', '8k', '7k', '6k', '5k', '4k', '3k', '2k', '1k',
+        '1d', '2d', '3d', '4d', '5d', '6d', '7d', '8d', '9d']
+# %%
+test_data=np.load('./test_data.npy',allow_pickle=True)
+num_test_data=len(test_data)
+
+# %%
+test_label_rawdata = np.load('./test_label.npy', allow_pickle=True)
+
+
+
+#%%
+size = 20
+zero_cheat_set = np.zeros( (num_train_data+num_test_data,size,2,19,19) )
+for i in range(num_train_data+num_test_data):
+    if i<num_train_data:
+        for j in range(size):
+            if j==0 :
+                zero_cheat_set[i,j,0,:,:]=np.zeros((19,19)) # j번쨰 판의 상태 넣음 
+                zero_cheat_set[i,j,1,:,:] = train_data[i][j]
+            elif len(train_data[i]) <= j:
+                zero_cheat_set[i,j,0,:,:]= train_data[i][len(train_data[i])-2]
+                zero_cheat_set[i,j,1,:,:] = train_data[i][len(train_data[i])-1] - train_data[i][len(train_data[i])-2]
+            else :
+                zero_cheat_set[i,j,0,:,:]=train_data[i][j-1]
+                zero_cheat_set[i,j,1,:,:] = train_data[i][j] - train_data[i][j-1]
+    else :
+        for j in range(size):
+            if j==0 :
+                zero_cheat_set[i,j,0,:,:]=np.zeros((19,19)) # j번쨰 판의 상태 넣음 
+                zero_cheat_set[i,j,1,:,:] = test_data[i-num_train_data][j]
+            elif len(test_data[i-num_train_data])<=j:
+                zero_cheat_set[i,j,0,:,:]=test_data[i-num_train_data][len(test_data[i-num_train_data])-2]
+                zero_cheat_set[i,j,1,:,:] = test_data[i-num_train_data][len(test_data[i-num_train_data])-1] - test_data[i-num_train_data][len(test_data[i-num_train_data])-2]
+            else :
+                zero_cheat_set[i,j,0,:,:]=test_data[i-num_train_data][j-1]
+                zero_cheat_set[i,j,1,:,:] = test_data[i-num_train_data][j] - test_data[i-num_train_data][j-1]
+cheat_set=np.reshape(zero_cheat_set,(num_train_data+num_test_data,size*2*19*19)) 
+
+
+#%%
+size = 11 
+zero_cheat_set = np.zeros( (num_train_data+num_test_data,size,2,19,19) )
+for i in range(num_train_data+num_test_data):
+    if i<num_train_data:
+        for j in range(size):
+            if j==0 :
+                zero_cheat_set[i,j,0,:,:]=np.zeros((19,19)) # j번쨰 판의 상태 넣음 
+                zero_cheat_set[i,j,1,:,:] = train_data[i][j]
+            else :
+                zero_cheat_set[i,j,0,:,:]=train_data[i][j-1]
+                zero_cheat_set[i,j,1,:,:] = train_data[i][j] - train_data[i][j-1]
+    else :
+        for j in range(size):
+            if j==0 :
+                zero_cheat_set[i,j,0,:,:]=np.zeros((19,19)) # j번쨰 판의 상태 넣음 
+                zero_cheat_set[i,j,1,:,:] = test_data[i-num_train_data][j]
+            else :
+                zero_cheat_set[i,j,0,:,:]=test_data[i-num_train_data][j-1]
+                zero_cheat_set[i,j,1,:,:] = test_data[i-num_train_data][j] - test_data[i-num_train_data][j-1]
+cheat_set=np.reshape(zero_cheat_set,(num_train_data+num_test_data,size*2*19*19)) 
+#%%
+cheat_label = np.zeros(num_test_data+num_train_data)
+
+for i in range(num_test_data+num_train_data):
+    if i<num_train_data:
+        cheat_label_temp = train_label_rawdata[i]
+        cheat_label_idx = rating.index(cheat_label_temp)
+        cheat_label[i] = cheat_label_idx
+    else :
+        cheat_label_temp = test_label_rawdata[i-num_train_data]
+        cheat_label_idx = rating.index(cheat_label_temp)
+        cheat_label[i] = cheat_label_idx  
+
+#%%
+from sklearn.ensemble import RandomForestClassifier
+clf = RandomForestClassifier(n_estimators=3000,n_jobs=-1);
+clf.fit(cheat_set,cheat_label)
+#%%
+from sklearn.ensemble import RandomForestClassifier
+clf = RandomForestClassifier(n_estimators=1500, max_depth=30,n_jobs=5,random_state=42);
+clf.fit(cheat_set,cheat_label)
 #%%
 
 import json
@@ -863,20 +988,41 @@ if __name__=="__main__":
         for j in range(size):
             if j==0 :
                 zero_test_set[i,j,0,:,:]=np.zeros((19,19)) # j번쨰 판의 상태 넣음 
+                zero_test_set[i,j,1,:,:] = test_data[i][j]
+            elif len(test_data[i]) <= j:
+                zero_test_set[i,j,0,:,:]= test_data[i][len(test_data[i])-2]
+                zero_test_set[i,j,1,:,:] = test_data[i][len(test_data[i])-1] - test_data[i][len(test_data[i])-2]
             else :
                 zero_test_set[i,j,0,:,:]=test_data[i][j-1]
-            zero_test_set[i,j,1,:,:] = test_data[i][j] - test_data[i][j-1]
+                zero_test_set[i,j,1,:,:] = test_data[i][j] - test_data[i][j-1]
         
 
     test_set=np.reshape(zero_test_set,(num_test_data,size*2*19*19)) 
-    pred_test_label = clf.predict(test_set)
-      
+#%%
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.datasets import make_classification
+
+def my_RF_prediction_prob(train_data, train_label, test_data, r):
+    clf = RandomForestClassifier( random_state=r, n_estimators=2000,n_jobs=-1)
+    clf.fit(train_data, train_label) 
+    return clf.predict_log_proba(test_data)
+#%%
+prob = []
+for k in range(0,10):
+    # Get last test data
+    p = my_RF_prediction_prob(cheat_set, cheat_label, test_set, k)
+    if prob==[]:
+        prob = p
+    else:
+        prob += p
+    predicted_label = prob.argmax(axis=1)
+pred_test_label = predicted_label
 #%%   
 rating = ['18k', '17k', '16k', '15k', '14k', '13k', '12k', '11k', '10k', 
           '9k', '8k', '7k', '6k', '5k', '4k', '3k', '2k', '1k',
           '1d', '2d', '3d', '4d', '5d', '6d', '7d', '8d', '9d']
 pred_test_label_txt = list_data = [str(rating[int(a)]).strip('\n\r') for a in pred_test_label]
-print(pred_test_label_txt)
+#print(pred_test_label_txt)
 
 #%%
     ans = pred_test_label_txt
@@ -886,3 +1032,23 @@ print(pred_test_label_txt)
     # 4. 암호화!(pycrytodome 설치)
     encrypt_data(key_path, ans, encrypt_ans_path)
 # %%
+pred_test_label
+#%%
+'''
+size = 10 
+1000, 50 -> 9.7 
+
+
+size = 11 
+1000, 50 -> 10.6
+1000, 70 -> 10. 3
+1500. 20 -> 10.7   -> split = 3 
+1500 , 15 -> 10. 6
+
+아마 size = 20 , estimator = 1500 , depth = 17 일 떄 10.8 나온듯 
+
+
+
+엔트로피 
+1000,50 -> 
+'''
