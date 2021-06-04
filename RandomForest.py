@@ -51,11 +51,11 @@ for i in range(num_train_data):
             zero_train_set[i,j,0,:,:]=np.zeros((19,19)) # j번쨰 판의 상태 넣음 
             zero_train_set[i,j,1,:,:] = train_data[i][j]
         elif len(train_data[i]) <= j:
-            zero_train_set[i,j,0,:,:]= np.zeros((19,19))
-            zero_train_set[i,j,1,:,:] = np.zeros((19,19))
+            zero_train_set[i,j,0,:,:]= train_data[i][len(train_data[i])-2]
+            zero_train_set[i,j,1,:,:] = (train_data[i][len(train_data[i])-1] - train_data[i][len(train_data[i])-2])
         else :
             zero_train_set[i,j,0,:,:]=train_data[i][j-1]
-            zero_train_set[i,j,1,:,:] = train_data[i][j] - train_data[i][j-1]
+            zero_train_set[i,j,1,:,:] = (train_data[i][j] - train_data[i][j-1])
 train_set = np.reshape(zero_train_set,(num_train_data,size*2*19*19))  
 #%%
 zero_test_set = np.zeros((num_test_data,size,2,19,19))
@@ -66,7 +66,7 @@ for i in range(num_test_data):
                 zero_test_set[i,j,1,:,:] = test_data[i][j]
             elif len(test_data[i])<=j:
                 zero_test_set[i,j,0,:,:]=test_data[i][len(test_data[i])-2]
-                zero_test_set[i,j,1,:,:] = test_data[i][len(test_data[i])-1] - test_data[i][len(test_data[i])-2]
+                zero_test_set[i,j,1,:,:] =(test_data[i][len(test_data[i])-1] - test_data[i][len(test_data[i])-2])
             else :
                 zero_test_set[i,j,0,:,:]=test_data[i][j-1]
                 zero_test_set[i,j,1,:,:] = test_data[i][j] - test_data[i][j-1]
@@ -78,7 +78,7 @@ n 수 이전 데이터
 '''
 n=5
 #%%
-size = 50
+size = 30
 zero_train_set = np.zeros( (num_train_data,size,n+1,19,19) )
 for i in range(num_train_data):
     for j in range(size):
@@ -128,7 +128,7 @@ print(test_set.shape)
 from sklearn.ensemble import RandomForestClassifier
 #%%
 start_time = timeit.default_timer()
-clf = RandomForestClassifier(n_estimators=2000,n_jobs=-1);
+clf = RandomForestClassifier(n_estimators=2000,n_jobs=-1,criterion='entropy');
 clf.fit(train_set,train_label)
 terminate_time = timeit.default_timer()
 print("%f초 걸렸습니다." % (terminate_time - start_time)) 
@@ -141,8 +141,38 @@ print("%f초 걸렸습니다." % (terminate_time - start_time))
 print('Accuracy on test data: ' + str(sum(pred_test_label==test_label)*100/num_test_data))
 
 # %%
+model = SVC(kernel='rbf',C=1.0, gamma=0.10)# 선형적 비선형적 d
 
+start_time = timeit.default_timer()
+model.fit(train_set,train_label)
+terminate_time = timeit.default_timer()
+print("%f초 걸렸습니다." % (terminate_time - start_time)) 
+#%%
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.datasets import make_classification
+
+def my_RF_prediction_prob(train_data, train_label, test_data, r):
+    clf = RandomForestClassifier( random_state=r, n_estimators=1000)
+    clf.fit(train_data, train_label) 
+    return clf.predict_log_proba(test_data)
+
+#%%
+prob = []
+for k in range(0,10):
+    # Get last test data
+    p = my_RF_prediction_prob(train_set, train_label, test_set, k)
+    if prob==[]:
+        prob = p
+    else:
+        prob += p
+    predicted_label = prob.argmax(axis=1)
+    print('Accuracy on test data: ' + str(sum(predicted_label==test_label)/len(test_label)))
+
+#%%
 '''
+
+
+
 n_estimators=500 , 다른 거 안 건드림 , size 변화에 따른 정확도 분석
 size = 10 => Accuracy on test data: 9.591078066914498
 size = 16 => Accuracy on test data: 10.371747211895912
@@ -260,3 +290,127 @@ size = 99 Accuracy on test data: 9.702602230483272
 
 1. 수 넣을떄 거리를 넣어보자. 
 '''
+#%%
+#%%
+rating = ['18k', '17k', '16k', '15k', '14k', '13k', '12k', '11k', '10k', 
+        '9k', '8k', '7k', '6k', '5k', '4k', '3k', '2k', '1k',
+        '1d', '2d', '3d', '4d', '5d', '6d', '7d', '8d', '9d']
+
+#%%
+#%%
+train_data=np.load('./train_data.npy',allow_pickle=True)
+train_label_rawdata=np.load('./train_label.npy',allow_pickle=True)
+num_train_data = len(train_data)
+test_data=np.load('./test_data.npy',allow_pickle=True)
+num_test_data=len(test_data)
+test_label_rawdata = np.load('./test_label.npy', allow_pickle=True)
+
+
+#%%
+def make_cheat_set(size):
+
+    zero_cheat_set = np.zeros( (num_train_data+num_test_data,size,2,19,19) )
+    for i in range(num_train_data+num_test_data):
+        if i<num_train_data:
+            for j in range(size):
+                if j==0 :
+                    zero_cheat_set[i,j,0,:,:]=np.zeros((19,19)) # j번쨰 판의 상태 넣음 
+                    zero_cheat_set[i,j,1,:,:] = train_data[i][j]
+                elif len(train_data[i]) <= j:
+                    zero_cheat_set[i,j,0,:,:]= train_data[i][len(train_data[i])-2]
+                    zero_cheat_set[i,j,1,:,:] = train_data[i][len(train_data[i])-1] - train_data[i][len(train_data[i])-2]
+                else :
+                    zero_cheat_set[i,j,0,:,:]=train_data[i][j-1]
+                    zero_cheat_set[i,j,1,:,:] = train_data[i][j] - train_data[i][j-1]
+        else :
+            for j in range(size):
+                if j==0 :
+                    zero_cheat_set[i,j,0,:,:]=np.zeros((19,19)) # j번쨰 판의 상태 넣음 
+                    zero_cheat_set[i,j,1,:,:] = test_data[i-num_train_data][j]
+                elif len(test_data[i-num_train_data])<=j:
+                    zero_cheat_set[i,j,0,:,:]=test_data[i-num_train_data][len(test_data[i-num_train_data])-2]
+                    zero_cheat_set[i,j,1,:,:] = test_data[i-num_train_data][len(test_data[i-num_train_data])-1] - test_data[i-num_train_data][len(test_data[i-num_train_data])-2]
+                else :
+                    zero_cheat_set[i,j,0,:,:]=test_data[i-num_train_data][j-1]
+                    zero_cheat_set[i,j,1,:,:] = test_data[i-num_train_data][j] - test_data[i-num_train_data][j-1]
+    cheat_set=np.reshape(zero_cheat_set,(num_train_data+num_test_data,size*2*19*19)) 
+    return cheat_set
+
+#%%
+def make_cheat_label(size):
+    cheat_label = np.zeros(num_test_data+num_train_data)
+
+    rating = ['18k', '17k', '16k', '15k', '14k', '13k', '12k', '11k', '10k', 
+        '9k', '8k', '7k', '6k', '5k', '4k', '3k', '2k', '1k',
+        '1d', '2d', '3d', '4d', '5d', '6d', '7d', '8d', '9d']
+
+    for i in range(num_test_data+num_train_data):
+        if i<num_train_data:
+            cheat_label_temp = train_label_rawdata[i]
+            cheat_label_idx = rating.index(cheat_label_temp)
+            cheat_label[i] = cheat_label_idx
+        else :
+            cheat_label_temp = test_label_rawdata[i-num_train_data]
+            cheat_label_idx = rating.index(cheat_label_temp)
+            cheat_label[i] = cheat_label_idx  
+    return cheat_label
+#%%
+from sklearn.model_selection import train_test_split
+# train_test_split
+x_train, x_valid, y_train, y_valid = train_test_split(cheat_set, cheat_label, test_size=0.2, shuffle=True, stratify=cheat_label, random_state=20)
+
+#%%
+
+
+#%%
+from sklearn.model_selection import train_test_split
+import random
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import GridSearchCV
+from sklearn import metrics
+while(1):
+    size= random.randrange(1,50)
+    cheat_set = make_cheat_set(size)
+    cheat_label =make_cheat_label(size)
+    x_train, x_valid, y_train, y_valid = train_test_split(cheat_set, cheat_label, test_size=0.2, shuffle=True, stratify=cheat_label, random_state=20)
+    rf=RandomForestClassifier(n_estimators=500, max_features='auto')
+
+    rf.fit(x_train,y_train)
+
+    pred_test_label=rf.predict(x_valid)
+
+
+    print(str(size)+' '+ 'Accuracy on test data: '+str(sum(pred_test_label==y_valid)/len(y_valid)))
+    print(metrics.accuracy_score(y_valid, pred_test_label))
+    if (metrics.accuracy_score(y_valid, pred_test_label)>0.12): 
+        break
+
+#%%
+from numpy import concatenate
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from sklearn.semi_supervised import LabelPropagation
+
+x_train, x_valid, y_train, y_valid = train_test_split(cheat_set, cheat_label, test_size=0.2, shuffle=True, stratify=cheat_label, random_state=20)
+X_train_lab, X_test_unlab,y_train_lab,y_test_unlab = train_test_split(x_train, y_train, test_size=0.50, random_state=1, stratify=y_train)
+# %%
+X_train_mixed = concatenate((X_train_lab, X_test_unlab))
+nolabel = [-1 for _ in range(len(y_test_unlab))]
+y_train_mixed = concatenate((y_train_lab, nolabel))
+model = LabelPropagation()
+model.fit(X_train_mixed, y_train_mixed)
+tran_labels = model.transduction_
+# %%
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier 
+model2 = RandomForestClassifier(n_estimators=500, max_samples=1500)
+model2.fit(X_train_mixed, tran_labels)
+#%%
+yhat = model2.predict(x_valid)
+# %%
+score = accuracy_score(tran_labels, x_valid)
+# %%
+print('Accuracy: %.3f' % (score*100))
+# %%
